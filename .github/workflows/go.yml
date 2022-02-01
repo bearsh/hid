@@ -1,0 +1,46 @@
+name: Go
+
+on:
+  push:
+    branches:
+    - master
+    - v2
+  pull_request:
+    branches:
+    - master
+    - v2
+
+jobs:
+
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+
+    - name: Install deps
+      run: sudo apt-get install -y pkg-config libudev-dev
+      if: startsWith(matrix.os,'ubuntu')
+
+    - name: Build
+      run: go build -v ./...
+
+    - name: Test
+      run: go test -v ./...
+
+    - name: Build hidraw
+      run: go build -tags hidraw -v ./...
+      if: startsWith(matrix.os,'ubuntu')
+      
+    - name: Test hidraw
+      run: go test -tags hidraw -v ./...
+      if: startsWith(matrix.os,'ubuntu')
