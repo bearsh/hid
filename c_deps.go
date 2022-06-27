@@ -1,4 +1,4 @@
-// +build dummy
+//go:build dummy
 
 // This file is part of a workaround for `go mod vendor` which won't vendor
 // C files if there's no Go file in the same directory.

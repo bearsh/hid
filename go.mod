@@ -1,3 +1,3 @@
 module github.com/bearsh/hid
 
-go 1.14
+go 1.17

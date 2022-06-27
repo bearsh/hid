@@ -4,7 +4,7 @@
 // This file is released under the 3-clause BSD license. Note however that Linux
 // support depends on libusb, released under LGNU GPL 2.1 or later.
 
-// +build linux,cgo darwin,!ios,cgo windows,cgo
+//go:build (linux && cgo) || (darwin && !ios && cgo) || (windows && cgo)
 
 package hid
 
