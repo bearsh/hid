@@ -5,10 +5,9 @@
  Alan Ott
  Signal 11 Software
 
- 8/22/2009
- Linux Version - 6/2/2009
+ libusb/hidapi Team
 
- Copyright 2009, All Rights Reserved.
+ Copyright 2022, All Rights Reserved.
 
  At the discretion of the user of this library,
  this software may be licensed under the terms of the
@@ -271,7 +270,7 @@ static int uses_numbered_reports(__u8 *report_descriptor, __u32 size) {
 		if (!get_hid_item_size(report_descriptor, i, size, &data_len, &key_size))
 			return 0; /* malformed report */
 
-		/* Skip over this key and it's associated data */
+		/* Skip over this key and its associated data */
 		i += data_len + key_size;
 	}
 
@@ -368,7 +367,7 @@ static int get_next_hid_usage(__u8 *report_descriptor, __u32 size, unsigned int 
 			break;
 		}
 
-		/* Skip over this key and it's associated data */
+		/* Skip over this key and its associated data */
 		*pos += data_len + key_size;
 
 		/* Return usage pair */
