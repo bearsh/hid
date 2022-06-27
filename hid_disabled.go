@@ -9,7 +9,7 @@
 package hid
 
 // Supported returns whether this platform is supported by the HID library or not.
-// The goal of this method is to allow programatically handling platforms that do
+// The goal of this method is to allow programmatically handling platforms that do
 // not support USB HID and not having to fall back to build constraints.
 func Supported() bool {
 	return false

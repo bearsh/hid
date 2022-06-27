@@ -67,7 +67,7 @@ import (
 var enumerateLock sync.Mutex
 
 // Supported returns whether this platform is supported by the HID library or not.
-// The goal of this method is to allow programatically handling platforms that do
+// The goal of this method is to allow programmatically handling platforms that do
 // not support USB HID and not having to fall back to build constraints.
 func Supported() bool {
 	return true
@@ -249,7 +249,7 @@ func (dev *Device) SendFeatureReport(b []byte) (int, error) {
 // Read is a wrapper to ReadTimeout that will check if device blocking is enabled
 // and set timeout accordingly.
 //
-// This reproduces C.hid_read() behaviour in wrapping hid_read_timeout:
+// This reproduces C.hid_read() behavior in wrapping hid_read_timeout:
 // return hid_read_timeout(dev, data, length, (dev->blocking)? -1: 0);
 func (dev *Device) Read(b []byte) (int, error) {
 	var timeout int
@@ -315,7 +315,7 @@ func (dev *Device) GetFeatureReport(b []byte) (int, error) {
 		return 0, ErrDeviceClosed
 	}
 
-	// Retrive the feature report
+	// Retrieve the feature report
 	read := int(C.hid_get_feature_report(device, (*C.uchar)(&b[0]), C.size_t(len(b))))
 	if read == -1 {
 		// If the read failed, verify if closed or other error
@@ -358,7 +358,7 @@ func (dev *Device) GetInputReport(b []byte) (int, error) {
 		return 0, ErrDeviceClosed
 	}
 
-	// Retrive the feature report
+	// Retrieve the feature report
 	read := int(C.hid_get_input_report(device, (*C.uchar)(&b[0]), C.size_t(len(b))))
 	if read == -1 {
 		// If the read failed, verify if closed or other error
