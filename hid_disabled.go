@@ -98,3 +98,8 @@ func (dev *Device) GetInputReport(b []byte) (int, error) {
 func (dev *Device) SetNonblocking(b bool) error {
 	return ErrUnsupportedPlatform
 }
+
+// GetDeviceInfo gets the DeviceInfo from a HID device.
+func (dev *Device) GetDeviceInfo() (*DeviceInfo, error) {
+	return nil, ErrUnsupportedPlatform
+}

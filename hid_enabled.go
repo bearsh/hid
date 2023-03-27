@@ -425,3 +425,57 @@ func (dev *Device) SetNonblocking(b bool) error {
 
 	return nil
 }
+
+// GetDeviceInfo gets the DeviceInfo from a HID device.
+func (dev *Device) GetDeviceInfo() (*DeviceInfo, error) {
+	// Abort if device closed in between
+	dev.lock.Lock()
+	device := dev.device
+	dev.lock.Unlock()
+
+	if device == nil {
+		return nil, ErrDeviceClosed
+	}
+
+	i := C.hid_get_device_info(device)
+	if i == nil {
+		// If the read failed, verify if closed or other error
+		dev.lock.Lock()
+		device = dev.device
+		dev.lock.Unlock()
+
+		if device == nil {
+			return nil, ErrDeviceClosed
+		}
+
+		// Device not closed, some other error occurred
+		message := C.hid_error(device)
+		if message == nil {
+			return nil, errors.New("hidapi: unknown failure")
+		}
+		failure, _ := wcharTToString(message)
+		return nil, errors.New("hidapi: " + failure)
+	}
+
+	info := &DeviceInfo{
+		Path:      C.GoString(i.path),
+		VendorID:  uint16(i.vendor_id),
+		ProductID: uint16(i.product_id),
+		Release:   uint16(i.release_number),
+		UsagePage: uint16(i.usage_page),
+		Usage:     uint16(i.usage),
+		Interface: int(i.interface_number),
+		BusType:   BusType(i.bus_type),
+	}
+	if i.serial_number != nil {
+		info.Serial, _ = wcharTToString(i.serial_number)
+	}
+	if i.product_string != nil {
+		info.Product, _ = wcharTToString(i.product_string)
+	}
+	if i.manufacturer_string != nil {
+		info.Manufacturer, _ = wcharTToString(i.manufacturer_string)
+	}
+
+	return info, nil
+}
