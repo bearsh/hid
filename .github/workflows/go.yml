@@ -18,12 +18,12 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
-        
+
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Set up Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v4
       with:
         go-version: 1.17
 
@@ -40,7 +40,7 @@ jobs:
     - name: Build hidraw
       run: go build -tags hidraw -v ./...
       if: startsWith(matrix.os,'ubuntu')
-      
+
     - name: Test hidraw
       run: go test -tags hidraw -v ./...
       if: startsWith(matrix.os,'ubuntu')
