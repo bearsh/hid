@@ -101,6 +101,7 @@ func Enumerate(vendorID uint16, productID uint16) []DeviceInfo {
 			UsagePage: uint16(head.usage_page),
 			Usage:     uint16(head.usage),
 			Interface: int(head.interface_number),
+			BusType:   BusType(head.bus_type),
 		}
 		if head.serial_number != nil {
 			info.Serial, _ = wcharTToString(head.serial_number)
