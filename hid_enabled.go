@@ -248,21 +248,52 @@ func (dev *Device) SendFeatureReport(b []byte) (int, error) {
 	return written, nil
 }
 
-// Read is a wrapper to ReadTimeout that will check if device blocking is enabled
-// and set timeout accordingly.
+// Read retrieves an input report from a HID device.
 //
-// This reproduces C.hid_read() behavior in wrapping hid_read_timeout:
-// return hid_read_timeout(dev, data, length, (dev->blocking)? -1: 0);
+// Input reports are returned to the host through the INTERRUPT IN
+// endpoint. The first byte will contain the Report number if the
+// device uses numbered reports.
 func (dev *Device) Read(b []byte) (int, error) {
-	var timeout int
-	if int(dev.device.blocking) == 1 {
-		timeout = -1
+	// Abort if nothing to read
+	if len(b) == 0 {
+		return 0, nil
 	}
-	return dev.ReadTimeout(b, timeout)
+	// Abort if device closed in between
+	dev.lock.Lock()
+	device := dev.device
+	dev.lock.Unlock()
+
+	if device == nil {
+		return 0, ErrDeviceClosed
+	}
+	// Execute the read operation
+	read := int(C.hid_read(device, (*C.uchar)(&b[0]), C.size_t(len(b))))
+	if read == -1 {
+		// If the read failed, verify if closed or other error
+		dev.lock.Lock()
+		device = dev.device
+		dev.lock.Unlock()
+
+		if device == nil {
+			return 0, ErrDeviceClosed
+		}
+		// Device not closed, some other error occurred
+		message := C.hid_error(device)
+		if message == nil {
+			return 0, errors.New("hidapi: unknown failure")
+		}
+		failure, _ := wcharTToString(message)
+		return 0, errors.New("hidapi: " + failure)
+	}
+	return read, nil
 }
 
 // ReadTimeout retrieves an input report from a HID device with a timeout. If timeout is -1 a
 // blocking read is performed, else a non-blocking that waits timeout milliseconds
+//
+// Input reports are returned to the host through the INTERRUPT IN
+// endpoint. The first byte will contain the Report number if the
+// device uses numbered reports.
 func (dev *Device) ReadTimeout(b []byte, timeout int) (int, error) {
 	// Abort if nothing to read
 	if len(b) == 0 {
