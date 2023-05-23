@@ -57,6 +57,14 @@ import (
 	"unsafe"
 )
 
+func init() {
+	// just to be sure: from the docs:
+	// This function should be called at the beginning of
+	// execution however, if there is a chance of HIDAPI handles
+	// being opened by different threads simultaneously.
+	C.hid_init()
+}
+
 // enumerateLock is a mutex serializing access to USB device enumeration needed
 // by the macOS USB HID system calls, which require 2 consecutive method calls
 // for enumeration, causing crashes if called concurrently.
