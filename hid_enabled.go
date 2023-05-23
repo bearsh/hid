@@ -510,3 +510,39 @@ func (dev *Device) GetDeviceInfo() (*DeviceInfo, error) {
 
 	return info, nil
 }
+
+// GetDeviceInfo gets a report descriptor from a HID device.
+func (dev *Device) GetReportDescriptor() ([]byte, error) {
+	// Abort if device closed in between
+	dev.lock.Lock()
+	device := dev.device
+	dev.lock.Unlock()
+
+	if device == nil {
+		return nil, ErrDeviceClosed
+	}
+
+	b := make([]byte, C.HID_API_MAX_REPORT_DESCRIPTOR_SIZE)
+
+	read := int(C.hid_get_report_descriptor(device, (*C.uchar)(&b[0]), C.size_t(len(b))))
+	if read == -1 {
+		// If the read failed, verify if closed or other error
+		dev.lock.Lock()
+		device = dev.device
+		dev.lock.Unlock()
+
+		if device == nil {
+			return nil, ErrDeviceClosed
+		}
+
+		// Device not closed, some other error occurred
+		message := C.hid_error(device)
+		if message == nil {
+			return nil, errors.New("hidapi: unknown failure")
+		}
+		failure, _ := wcharTToString(message)
+		return nil, errors.New("hidapi: " + failure)
+	}
+
+	return b[:read], nil
+}
