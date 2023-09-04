@@ -28,6 +28,12 @@ type Device struct {
 	DeviceInfo // Embed the infos for easier access
 }
 
+// OpenByPath connects to an HID device by the given path name. On platforms that this file
+// implements the method just returns an error.
+func OpenByPath(p string) (*Device, error) {
+	return nil, ErrUnsupportedPlatform
+}
+
 // Open connects to an HID device by its path name. On platforms that this file
 // implements the method just returns an error.
 func (info DeviceInfo) Open() (*Device, error) {

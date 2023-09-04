@@ -151,6 +151,48 @@ type Device struct {
 	lock   sync.Mutex
 }
 
+// OpenByPath open the HID USB device by path and return a device handle.
+func OpenByPath(p string) (*Device, error) {
+	path := C.CString(p)
+	defer C.free(unsafe.Pointer(path))
+
+	device := C.hid_open_path(path)
+	if device == nil {
+		return nil, errors.New("hidapi: failed to open device")
+	}
+
+	info := C.hid_get_device_info(device)
+	if info == nil {
+		return nil, errors.New("hidapi: failed to query device info")
+	}
+
+	dev := &Device{
+		device: device,
+		DeviceInfo: DeviceInfo{
+			Path:      C.GoString(info.path),
+			VendorID:  uint16(info.vendor_id),
+			ProductID: uint16(info.product_id),
+			Release:   uint16(info.release_number),
+			UsagePage: uint16(info.usage_page),
+			Usage:     uint16(info.usage),
+			Interface: int(info.interface_number),
+			BusType:   BusType(info.bus_type),
+		},
+	}
+
+	if info.serial_number != nil {
+		dev.Serial, _ = wcharTToString(info.serial_number)
+	}
+	if info.product_string != nil {
+		dev.Product, _ = wcharTToString(info.product_string)
+	}
+	if info.manufacturer_string != nil {
+		dev.Manufacturer, _ = wcharTToString(info.manufacturer_string)
+	}
+
+	return dev, nil
+}
+
 // Close releases the HID USB device handle.
 func (dev *Device) Close() error {
 	dev.lock.Lock()
