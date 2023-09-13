@@ -44,3 +44,7 @@ jobs:
     - name: Test hidraw
       run: go test -tags hidraw -v ./...
       if: startsWith(matrix.os,'ubuntu')
+
+    - name: Cross compile to win (hid disabled)
+      run: GOOS=windows go build -v ./...
+      if: startsWith(matrix.os,'ubuntu')
