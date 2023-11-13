@@ -4,7 +4,7 @@
 // This file is released under the 3-clause BSD license. Note however that Linux
 // support depends on libusb, released under LGNU GPL 2.1 or later.
 
-// +build linux,cgo darwin,!ios,cgo windows,cgo
+//go:build (linux && cgo) || (darwin && !ios && cgo) || (windows && cgo)
 
 package hid
 
@@ -56,17 +56,26 @@ import (
 	"unsafe"
 )
 
+func init() {
+	// just to be sure: from the docs:
+	// This function should be called at the beginning of
+	// execution however, if there is a chance of HIDAPI handles
+	// being opened by different threads simultaneously.
+	C.hid_init()
+}
+
 // enumerateLock is a mutex serializing access to USB device enumeration needed
 // by the macOS USB HID system calls, which require 2 consecutive method calls
 // for enumeration, causing crashes if called concurrently.
 //
 // For more details, see:
-//   https://developer.apple.com/documentation/iokit/1438371-iohidmanagersetdevicematching
-//   > "subsequent calls will cause the hid manager to release previously enumerated devices"
+//
+//	https://developer.apple.com/documentation/iokit/1438371-iohidmanagersetdevicematching
+//	> "subsequent calls will cause the hid manager to release previously enumerated devices"
 var enumerateLock sync.Mutex
 
 // Supported returns whether this platform is supported by the HID library or not.
-// The goal of this method is to allow programatically handling platforms that do
+// The goal of this method is to allow programmatically handling platforms that do
 // not support USB HID and not having to fall back to build constraints.
 func Supported() bool {
 	return true
@@ -74,9 +83,9 @@ func Supported() bool {
 
 // Enumerate returns a list of all the HID devices attached to the system which
 // match the vendor and product id:
-//  - If the vendor id is set to 0 then any vendor matches.
-//  - If the product id is set to 0 then any product matches.
-//  - If the vendor and product id are both 0, all HID devices are returned.
+//   - If the vendor id is set to 0 then any vendor matches.
+//   - If the product id is set to 0 then any product matches.
+//   - If the vendor and product id are both 0, all HID devices are returned.
 func Enumerate(vendorID uint16, productID uint16) []DeviceInfo {
 	enumerateLock.Lock()
 	defer enumerateLock.Unlock()
@@ -99,6 +108,7 @@ func Enumerate(vendorID uint16, productID uint16) []DeviceInfo {
 			UsagePage: uint16(head.usage_page),
 			Usage:     uint16(head.usage),
 			Interface: int(head.interface_number),
+			BusType:   BusType(head.bus_type),
 		}
 		if head.serial_number != nil {
 			info.Serial, _ = wcharTToString(head.serial_number)
@@ -138,6 +148,48 @@ type Device struct {
 
 	device *C.hid_device // Low level HID device to communicate through
 	lock   sync.Mutex
+}
+
+// OpenByPath open the HID USB device by path and return a device handle.
+func OpenByPath(p string) (*Device, error) {
+	path := C.CString(p)
+	defer C.free(unsafe.Pointer(path))
+
+	device := C.hid_open_path(path)
+	if device == nil {
+		return nil, errors.New("hidapi: failed to open device")
+	}
+
+	info := C.hid_get_device_info(device)
+	if info == nil {
+		return nil, errors.New("hidapi: failed to query device info")
+	}
+
+	dev := &Device{
+		device: device,
+		DeviceInfo: DeviceInfo{
+			Path:      C.GoString(info.path),
+			VendorID:  uint16(info.vendor_id),
+			ProductID: uint16(info.product_id),
+			Release:   uint16(info.release_number),
+			UsagePage: uint16(info.usage_page),
+			Usage:     uint16(info.usage),
+			Interface: int(info.interface_number),
+			BusType:   BusType(info.bus_type),
+		},
+	}
+
+	if info.serial_number != nil {
+		dev.Serial, _ = wcharTToString(info.serial_number)
+	}
+	if info.product_string != nil {
+		dev.Product, _ = wcharTToString(info.product_string)
+	}
+	if info.manufacturer_string != nil {
+		dev.Manufacturer, _ = wcharTToString(info.manufacturer_string)
+	}
+
+	return dev, nil
 }
 
 // Close releases the HID USB device handle.
@@ -239,21 +291,52 @@ func (dev *Device) SendFeatureReport(b []byte) (int, error) {
 	return written, nil
 }
 
-// Read is a wrapper to ReadTimeout that will check if device blocking is enabled
-// and set timeout accordingly.
+// Read retrieves an input report from a HID device.
 //
-// This reproduces C.hid_read() behaviour in wrapping hid_read_timeout:
-// return hid_read_timeout(dev, data, length, (dev->blocking)? -1: 0);
+// Input reports are returned to the host through the INTERRUPT IN
+// endpoint. The first byte will contain the Report number if the
+// device uses numbered reports.
 func (dev *Device) Read(b []byte) (int, error) {
-	var timeout int
-	if int(dev.device.blocking) == 1 {
-		timeout = -1
+	// Abort if nothing to read
+	if len(b) == 0 {
+		return 0, nil
 	}
-	return dev.ReadTimeout(b, timeout)
+	// Abort if device closed in between
+	dev.lock.Lock()
+	device := dev.device
+	dev.lock.Unlock()
+
+	if device == nil {
+		return 0, ErrDeviceClosed
+	}
+	// Execute the read operation
+	read := int(C.hid_read(device, (*C.uchar)(&b[0]), C.size_t(len(b))))
+	if read == -1 {
+		// If the read failed, verify if closed or other error
+		dev.lock.Lock()
+		device = dev.device
+		dev.lock.Unlock()
+
+		if device == nil {
+			return 0, ErrDeviceClosed
+		}
+		// Device not closed, some other error occurred
+		message := C.hid_error(device)
+		if message == nil {
+			return 0, errors.New("hidapi: unknown failure")
+		}
+		failure, _ := wcharTToString(message)
+		return 0, errors.New("hidapi: " + failure)
+	}
+	return read, nil
 }
 
 // ReadTimeout retrieves an input report from a HID device with a timeout. If timeout is -1 a
 // blocking read is performed, else a non-blocking that waits timeout milliseconds
+//
+// Input reports are returned to the host through the INTERRUPT IN
+// endpoint. The first byte will contain the Report number if the
+// device uses numbered reports.
 func (dev *Device) ReadTimeout(b []byte, timeout int) (int, error) {
 	// Abort if nothing to read
 	if len(b) == 0 {
@@ -308,7 +391,7 @@ func (dev *Device) GetFeatureReport(b []byte) (int, error) {
 		return 0, ErrDeviceClosed
 	}
 
-	// Retrive the feature report
+	// Retrieve the feature report
 	read := int(C.hid_get_feature_report(device, (*C.uchar)(&b[0]), C.size_t(len(b))))
 	if read == -1 {
 		// If the read failed, verify if closed or other error
@@ -351,7 +434,7 @@ func (dev *Device) GetInputReport(b []byte) (int, error) {
 		return 0, ErrDeviceClosed
 	}
 
-	// Retrive the feature report
+	// Retrieve the feature report
 	read := int(C.hid_get_input_report(device, (*C.uchar)(&b[0]), C.size_t(len(b))))
 	if read == -1 {
 		// If the read failed, verify if closed or other error
@@ -415,4 +498,94 @@ func (dev *Device) SetNonblocking(b bool) error {
 	}
 
 	return nil
+}
+
+// GetDeviceInfo gets the DeviceInfo from a HID device.
+func (dev *Device) GetDeviceInfo() (*DeviceInfo, error) {
+	// Abort if device closed in between
+	dev.lock.Lock()
+	device := dev.device
+	dev.lock.Unlock()
+
+	if device == nil {
+		return nil, ErrDeviceClosed
+	}
+
+	i := C.hid_get_device_info(device)
+	if i == nil {
+		// If the read failed, verify if closed or other error
+		dev.lock.Lock()
+		device = dev.device
+		dev.lock.Unlock()
+
+		if device == nil {
+			return nil, ErrDeviceClosed
+		}
+
+		// Device not closed, some other error occurred
+		message := C.hid_error(device)
+		if message == nil {
+			return nil, errors.New("hidapi: unknown failure")
+		}
+		failure, _ := wcharTToString(message)
+		return nil, errors.New("hidapi: " + failure)
+	}
+
+	info := &DeviceInfo{
+		Path:      C.GoString(i.path),
+		VendorID:  uint16(i.vendor_id),
+		ProductID: uint16(i.product_id),
+		Release:   uint16(i.release_number),
+		UsagePage: uint16(i.usage_page),
+		Usage:     uint16(i.usage),
+		Interface: int(i.interface_number),
+		BusType:   BusType(i.bus_type),
+	}
+	if i.serial_number != nil {
+		info.Serial, _ = wcharTToString(i.serial_number)
+	}
+	if i.product_string != nil {
+		info.Product, _ = wcharTToString(i.product_string)
+	}
+	if i.manufacturer_string != nil {
+		info.Manufacturer, _ = wcharTToString(i.manufacturer_string)
+	}
+
+	return info, nil
+}
+
+// GetDeviceInfo gets a report descriptor from a HID device.
+func (dev *Device) GetReportDescriptor() ([]byte, error) {
+	// Abort if device closed in between
+	dev.lock.Lock()
+	device := dev.device
+	dev.lock.Unlock()
+
+	if device == nil {
+		return nil, ErrDeviceClosed
+	}
+
+	b := make([]byte, C.HID_API_MAX_REPORT_DESCRIPTOR_SIZE)
+
+	read := int(C.hid_get_report_descriptor(device, (*C.uchar)(&b[0]), C.size_t(len(b))))
+	if read == -1 {
+		// If the read failed, verify if closed or other error
+		dev.lock.Lock()
+		device = dev.device
+		dev.lock.Unlock()
+
+		if device == nil {
+			return nil, ErrDeviceClosed
+		}
+
+		// Device not closed, some other error occurred
+		message := C.hid_error(device)
+		if message == nil {
+			return nil, errors.New("hidapi: unknown failure")
+		}
+		failure, _ := wcharTToString(message)
+		return nil, errors.New("hidapi: " + failure)
+	}
+
+	return b[:read], nil
 }
