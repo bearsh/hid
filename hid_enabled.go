@@ -47,11 +47,18 @@ package hid
 #elif OS_WINDOWS
 	#include "hidapi/windows/hid.c"
 #endif
+
+static int get_errno(void) {
+#ifdef OS_WINDOWS
+	return (int)GetLastError();
+#else
+	return errno;
+#endif
+}
 */
 import "C"
 
 import (
-	"errors"
 	"runtime"
 	"sync"
 	"unsafe"
@@ -163,7 +170,7 @@ func OpenByPath(p string) (*Device, error) {
 
 	info := C.hid_get_device_info(device)
 	if info == nil {
-		return nil, errors.New("hidapi: failed to query device info")
+		return nil, newHidError("hidapi: failed to query device info", (int)(C.get_errno()))
 	}
 
 	dev := &Device{
@@ -240,13 +247,14 @@ func (dev *Device) Write(b []byte) (int, error) {
 		if device == nil {
 			return 0, ErrDeviceClosed
 		}
+
 		// Device not closed, some other error occurred
 		message := C.hid_error(device)
 		if message == nil {
-			return 0, errors.New("hidapi: unknown failure")
+			return 0, newHidError("hidapi: unknown failure", (int)(C.get_errno()))
 		}
 		failure, _ := wcharTToString(message)
-		return 0, errors.New("hidapi: " + failure)
+		return 0, newHidError("hidapi: "+failure, (int)(C.get_errno()))
 	}
 	return written, nil
 }
@@ -290,10 +298,10 @@ func (dev *Device) SendFeatureReport(b []byte) (int, error) {
 		// Device not closed, some other error occurred
 		message := C.hid_error(device)
 		if message == nil {
-			return 0, errors.New("hidapi: unknown failure")
+			return 0, newHidError("hidapi: unknown failure", (int)(C.get_errno()))
 		}
 		failure, _ := wcharTToString(message)
-		return 0, errors.New("hidapi: " + failure)
+		return 0, newHidError("hidapi: "+failure, (int)(C.get_errno()))
 	}
 	return written, nil
 }
@@ -303,6 +311,10 @@ func (dev *Device) SendFeatureReport(b []byte) (int, error) {
 // Input reports are returned to the host through the INTERRUPT IN
 // endpoint. The first byte will contain the Report number if the
 // device uses numbered reports.
+//
+// A blocking system call may be interrupted by the go runtime. This
+// can be checked by casting the error to an HidError and calling
+// the InterruptedSystemCall() method.
 func (dev *Device) Read(b []byte) (int, error) {
 	// Abort if nothing to read
 	if len(b) == 0 {
@@ -330,10 +342,10 @@ func (dev *Device) Read(b []byte) (int, error) {
 		// Device not closed, some other error occurred
 		message := C.hid_error(device)
 		if message == nil {
-			return 0, errors.New("hidapi: unknown failure")
+			return 0, newHidError("hidapi: unknown failure", (int)(C.get_errno()))
 		}
 		failure, _ := wcharTToString(message)
-		return 0, errors.New("hidapi: " + failure)
+		return 0, newHidError("hidapi: "+failure, (int)(C.get_errno()))
 	}
 	return read, nil
 }
@@ -344,6 +356,10 @@ func (dev *Device) Read(b []byte) (int, error) {
 // Input reports are returned to the host through the INTERRUPT IN
 // endpoint. The first byte will contain the Report number if the
 // device uses numbered reports.
+//
+// A blocking system call may be interrupted by the go runtime. This
+// can be checked by casting the error to an HidError and calling
+// the InterruptedSystemCall() method.
 func (dev *Device) ReadTimeout(b []byte, timeout int) (int, error) {
 	// Abort if nothing to read
 	if len(b) == 0 {
@@ -371,10 +387,10 @@ func (dev *Device) ReadTimeout(b []byte, timeout int) (int, error) {
 		// Device not closed, some other error occurred
 		message := C.hid_error(device)
 		if message == nil {
-			return 0, errors.New("hidapi: unknown failure")
+			return 0, newHidError("hidapi: unknown failure", (int)(C.get_errno()))
 		}
 		failure, _ := wcharTToString(message)
-		return 0, errors.New("hidapi: " + failure)
+		return 0, newHidError("hidapi: "+failure, (int)(C.get_errno()))
 	}
 	return read, nil
 }
@@ -413,10 +429,10 @@ func (dev *Device) GetFeatureReport(b []byte) (int, error) {
 		// Device not closed, some other error occurred
 		message := C.hid_error(device)
 		if message == nil {
-			return 0, errors.New("hidapi: unknown failure")
+			return 0, newHidError("hidapi: unknown failure", (int)(C.get_errno()))
 		}
 		failure, _ := wcharTToString(message)
-		return 0, errors.New("hidapi: " + failure)
+		return 0, newHidError("hidapi: "+failure, (int)(C.get_errno()))
 	}
 
 	return read, nil
@@ -456,10 +472,10 @@ func (dev *Device) GetInputReport(b []byte) (int, error) {
 		// Device not closed, some other error occurred
 		message := C.hid_error(device)
 		if message == nil {
-			return 0, errors.New("hidapi: unknown failure")
+			return 0, newHidError("hidapi: unknown failure", (int)(C.get_errno()))
 		}
 		failure, _ := wcharTToString(message)
-		return 0, errors.New("hidapi: " + failure)
+		return 0, newHidError("hidapi: "+failure, (int)(C.get_errno()))
 	}
 
 	return read, nil
@@ -498,10 +514,10 @@ func (dev *Device) SetNonblocking(b bool) error {
 		// Device not closed, some other error occurred
 		message := C.hid_error(device)
 		if message == nil {
-			return errors.New("hidapi: unknown failure")
+			return newHidError("hidapi: unknown failure", (int)(C.get_errno()))
 		}
 		failure, _ := wcharTToString(message)
-		return errors.New("hidapi: " + failure)
+		return newHidError("hidapi: "+failure, (int)(C.get_errno()))
 	}
 
 	return nil
@@ -532,10 +548,10 @@ func (dev *Device) GetDeviceInfo() (*DeviceInfo, error) {
 		// Device not closed, some other error occurred
 		message := C.hid_error(device)
 		if message == nil {
-			return nil, errors.New("hidapi: unknown failure")
+			return nil, newHidError("hidapi: unknown failure", (int)(C.get_errno()))
 		}
 		failure, _ := wcharTToString(message)
-		return nil, errors.New("hidapi: " + failure)
+		return nil, newHidError("hidapi: "+failure, (int)(C.get_errno()))
 	}
 
 	info := &DeviceInfo{
@@ -588,10 +604,10 @@ func (dev *Device) GetReportDescriptor() ([]byte, error) {
 		// Device not closed, some other error occurred
 		message := C.hid_error(device)
 		if message == nil {
-			return nil, errors.New("hidapi: unknown failure")
+			return nil, newHidError("hidapi: unknown failure", (int)(C.get_errno()))
 		}
 		failure, _ := wcharTToString(message)
-		return nil, errors.New("hidapi: " + failure)
+		return nil, newHidError("hidapi: "+failure, (int)(C.get_errno()))
 	}
 
 	return b[:read], nil

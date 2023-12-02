@@ -1,13 +1,58 @@
 // hid - Gopher Interface Devices (USB HID)
 // Copyright (c) 2017 Péter Szilágyi. All rights reserved.
+//               2023 Martin Gysel
 //
 // This file is released under the 3-clause BSD license. Note however that Linux
-// support depends on libusb, released under GNU LGPL 2.1 or later.
+// support may depends on libusb, released under GNU LGPL 2.1 or later.
 
 // Package hid provides an interface for USB HID devices.
 package hid
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"runtime"
+	"syscall"
+)
+
+type HidError struct {
+	s    string
+	code int
+}
+
+func newHidError(text string, code int) error {
+	return &HidError{s: text, code: code}
+}
+
+func (e *HidError) Error() string {
+	if e.code == 0 {
+		return e.s
+	}
+	return fmt.Sprintf("%s (%d)", e.s, e.code)
+}
+
+// InterruptedSystemCall returns true if a blocking operation was
+// interrupted by a system call.
+//
+// Since go1.14, goroutines are now asynchronously preemptible:
+// A consequence of the implementation of preemption is that on Unix systems,
+// including Linux and macOS systems, programs built with Go 1.14 will receive
+// more signals than programs built with earlier releases. This means that
+// programs that use packages like syscall or golang.org/x/sys/unix will
+// see more slow system calls fail with EINTR errors.
+//
+// The same is true for programs using cgo for system calls.
+// Unfortunately we have no control over the underlying hidapi library, but
+// we can, on error, read out errno and check for EINTR errors (at least on
+// supported platforms). For convenience, this function has been added to quickly
+// check if the underlying systemcall got interrupted by a signal.
+// AFAIK this only happens on linux with the hidraw backend.
+func (e *HidError) InterruptedSystemCall() bool {
+	if runtime.GOOS != "windows" {
+		return e.code == int(syscall.EINTR)
+	}
+	return false
+}
 
 // ErrDeviceClosed is returned for operations where the device closed before or
 // during the execution.
