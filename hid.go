@@ -17,6 +17,9 @@ var ErrDeviceClosed = errors.New("hid: device closed")
 // operating system is not supported by the library.
 var ErrUnsupportedPlatform = errors.New("hid: unsupported platform")
 
+// ErrOpenDevice is returned if there's an error when opening the device
+var ErrOpenDevice = errors.New("hidapi: failed to open device")
+
 const (
 	BusUnknown   = 0x00
 	BusUSB       = 0x01

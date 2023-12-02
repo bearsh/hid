@@ -135,7 +135,7 @@ func (info DeviceInfo) Open() (*Device, error) {
 
 	device := C.hid_open_path(path)
 	if device == nil {
-		return nil, errors.New("hidapi: failed to open device")
+		return nil, ErrOpenDevice
 	}
 	return &Device{
 		DeviceInfo: info,
@@ -158,7 +158,7 @@ func OpenByPath(p string) (*Device, error) {
 
 	device := C.hid_open_path(path)
 	if device == nil {
-		return nil, errors.New("hidapi: failed to open device")
+		return nil, ErrOpenDevice
 	}
 
 	info := C.hid_get_device_info(device)
