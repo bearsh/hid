@@ -54,6 +54,7 @@ import (
 	"errors"
 	"runtime"
 	"sync"
+	"syscall"
 	"unsafe"
 )
 
@@ -316,9 +317,15 @@ func (dev *Device) Read(b []byte) (int, error) {
 	if device == nil {
 		return 0, ErrDeviceClosed
 	}
+
+readAgain:
 	// Execute the read operation
-	read := int(C.hid_read(device, (*C.uchar)(&b[0]), C.size_t(len(b))))
+	read, err := C.hid_read(device, (*C.uchar)(&b[0]), C.size_t(len(b)))
 	if read == -1 {
+		if errno, ok := err.(syscall.Errno); ok && errno == syscall.EINTR {
+			goto readAgain
+		}
+
 		// If the read failed, verify if closed or other error
 		dev.lock.Lock()
 		device = dev.device
@@ -335,7 +342,7 @@ func (dev *Device) Read(b []byte) (int, error) {
 		failure, _ := wcharTToString(message)
 		return 0, errors.New("hidapi: " + failure)
 	}
-	return read, nil
+	return int(read), nil
 }
 
 // ReadTimeout retrieves an input report from a HID device with a timeout. If timeout is -1 a
@@ -357,9 +364,15 @@ func (dev *Device) ReadTimeout(b []byte, timeout int) (int, error) {
 	if device == nil {
 		return 0, ErrDeviceClosed
 	}
+
+readAgain:
 	// Execute the read operation
-	read := int(C.hid_read_timeout(device, (*C.uchar)(&b[0]), C.size_t(len(b)), C.int(timeout)))
+	read, err := C.hid_read_timeout(device, (*C.uchar)(&b[0]), C.size_t(len(b)), C.int(timeout))
 	if read == -1 {
+		if errno, ok := err.(syscall.Errno); ok && errno == syscall.EINTR {
+			goto readAgain
+		}
+
 		// If the read failed, verify if closed or other error
 		dev.lock.Lock()
 		device = dev.device
@@ -376,7 +389,7 @@ func (dev *Device) ReadTimeout(b []byte, timeout int) (int, error) {
 		failure, _ := wcharTToString(message)
 		return 0, errors.New("hidapi: " + failure)
 	}
-	return read, nil
+	return int(read), nil
 }
 
 // GetFeatureReport retrieves a feature report from a HID device
