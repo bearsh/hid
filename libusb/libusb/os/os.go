@@ -1,6 +1,9 @@
-//go:build dummy
-
-// This Go file is part of a workaround for `go mod vendor`.
-// Please see the file `c_deps.go` at the root for more information.
+//go:build !hidraw && linux && cgo
 
 package os
+
+/*
+#cgo CFLAGS: -I. -I../. -I../../../. -DOS_LINUX -D_GNU_SOURCE -DPLATFORM_POSIX
+#cgo pkg-config: libudev
+*/
+import "C"

@@ -9,44 +9,15 @@
 package hid
 
 /*
-#cgo CFLAGS: -I./hidapi/hidapi
+#cgo CFLAGS: -I./hidapi/.
 
-#cgo !hidraw,linux CFLAGS: -I. -I./libusb/libusb -DDEFAULT_VISIBILITY="" -DOS_LINUX -D_GNU_SOURCE -DPLATFORM_POSIX
 #cgo !hidraw,linux,!android LDFLAGS: -lrt
-#cgo !hidraw,linux,noiconv CFLAGS: -DNO_ICONV
-#cgo hidraw,linux CFLAGS: -DOS_LINUX -D_GNU_SOURCE -DHIDRAW
 #cgo hidraw,linux,!android pkg-config: libudev
-#cgo darwin CFLAGS: -DOS_DARWIN
 #cgo darwin LDFLAGS: -framework CoreFoundation -framework IOKit -framework AppKit
-#cgo windows CFLAGS: -DOS_WINDOWS
 #cgo windows LDFLAGS: -lsetupapi
 
-#ifdef OS_LINUX
-	#ifdef HIDRAW
-	#include "hidapi/linux/hid.c"
-	#else
-	#include <poll.h>
-	#include "os/events_posix.c"
-	#include "os/threads_posix.c"
-
-	#include "os/linux_usbfs.c"
-	#include "os/linux_netlink.c"
-
-	#include "core.c"
-	#include "descriptor.c"
-	#include "hotplug.c"
-	#include "io.c"
-	#include "strerror.c"
-	#include "sync.c"
-
-	#undef _GNU_SOURCE // it's already defined in the c-file
-	#include "hidapi/libusb/hid.c"
-	#endif
-#elif OS_DARWIN
-	#include "hidapi/mac/hid.c"
-#elif OS_WINDOWS
-	#include "hidapi/windows/hid.c"
-#endif
+#include <stdlib.h>
+#include "hidapi.h"
 */
 import "C"
 

@@ -1,9 +1,15 @@
+//go:build cgo
+
 package hid
 
 import (
 	"errors"
-	"golang.org/x/sys/windows"
 	"unsafe"
+
+	"golang.org/x/sys/windows"
+
+	_ "github.com/bearsh/hid/hidapi"
+	_ "github.com/bearsh/hid/hidapi/windows"
 )
 
 /*
