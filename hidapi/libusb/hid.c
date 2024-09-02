@@ -49,6 +49,10 @@
 #endif
 #endif
 
+#if defined(__ANDROID__)
+#include <android/log.h>
+#endif
+
 #include "hidapi_libusb.h"
 
 #if defined(__ANDROID__) && __ANDROID_API__ < __ANDROID_API_N__
@@ -117,7 +121,11 @@ extern "C" {
 #endif
 
 #ifdef DEBUG_PRINTF
+#ifdef __ANDROID__
+#define LOG(...) __android_log_print(ANDROID_LOG_INFO, "hidapi", __VA_ARGS__)
+#else
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
+#endif
 #else
 #define LOG(...) do {} while (0)
 #endif

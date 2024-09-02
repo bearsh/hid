@@ -4,12 +4,12 @@
 // This file is released under the 3-clause BSD license. Note however that Linux
 // support depends on libusb, released under LGNU GPL 2.1 or later.
 
-//go:build (linux && cgo) || (darwin && !ios && cgo) || (windows && cgo)
+//go:build (linux && cgo) || (darwin && !ios && cgo) || (windows && cgo) || (android && cgo)
 
 package hid
 
 /*
-#cgo CFLAGS: -I./hidapi/.
+#cgo CFLAGS: -I./hidapi/. -I./libusb/libusb/.
 
 #cgo !hidraw,linux,!android LDFLAGS: -lrt
 #cgo hidraw,linux,!android pkg-config: libudev
@@ -18,6 +18,15 @@ package hid
 
 #include <stdlib.h>
 #include "hidapi.h"
+#include "libusb.h"
+
+static void set_default_options(void) {
+#if defined(__ANDROID__)
+	// see also: https://github.com/libusb/libusb/blob/e678b3fad58a508cbd0a6e6dc777fb48346f948b/android/README#L84
+	libusb_set_option(NULL, LIBUSB_OPTION_NO_DEVICE_DISCOVERY, NULL);
+#endif
+}
+
 */
 import "C"
 
@@ -30,6 +39,7 @@ import (
 )
 
 func init() {
+	C.set_default_options()
 	// just to be sure: from the docs:
 	// This function should be called at the beginning of
 	// execution however, if there is a chance of HIDAPI handles
