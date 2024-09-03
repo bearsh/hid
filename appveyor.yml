@@ -21,11 +21,12 @@ environment:
       PATH: C:\msys64\mingw32\bin\;%PATH%
 
 install:
-  - rmdir C:\go /s /q
-  - appveyor DownloadFile https://storage.googleapis.com/golang/go1.17.11.windows-%GOARCH%.zip
-  - 7z x go1.17.11.windows-%GOARCH%.zip -y -oC:\ > NUL
-  - go version
-  - gcc --version
+  - ps: rm -Path C:\go -Recurse -Force
+  - ps: $env:GOVERSION=(curl https://go.dev/dl/?mode=json | ConvertFrom-Json)[0].version
+  - ps: appveyor DownloadFile "https://go.dev/dl/${env:GOVERSION}.windows-${env:GOARCH}.zip"
+  - ps: 7z x "${env:GOVERSION}.windows-${env:GOARCH}.zip" -y -oC:\ > $null
+  - ps: go version
+  - ps: gcc --version
 
 build_script:
   - go install ./...
