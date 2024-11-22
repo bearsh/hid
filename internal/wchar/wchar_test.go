@@ -8,7 +8,7 @@
 
 //go:build !ios && (linux || darwin || windows)
 
-package hid
+package wchar
 
 import (
 	"fmt"
@@ -17,8 +17,8 @@ import (
 
 func TestGowcharSimple(t *testing.T) {
 	str1 := "Привет, 世界. 𪛖"
-	wstr, size := stringToWcharT(str1)
-	switch sizeofWcharT {
+	wstr, size := StringToWcharT(str1)
+	switch SizeofWcharT {
 	case 2:
 		if size != 15 {
 			t.Errorf("size(%v) != 15", size)
@@ -28,9 +28,9 @@ func TestGowcharSimple(t *testing.T) {
 			t.Errorf("size(%v) != 14", size)
 		}
 	default:
-		panic(fmt.Sprintf("sizeof(wchar_t) = %v", sizeofWcharT))
+		panic(fmt.Sprintf("sizeof(wchar_t) = %v", SizeofWcharT))
 	}
-	str2, err := wcharTToString(wstr)
+	str2, err := WcharTToString(wstr)
 	if err != nil {
 		t.Errorf("wcharTToString error: %v", err)
 	}
@@ -41,8 +41,8 @@ func TestGowcharSimple(t *testing.T) {
 
 func TestGowcharSimpleN(t *testing.T) {
 	str1 := "Привет, 世界. 𪛖"
-	wstr, size := stringToWcharT(str1)
-	switch sizeofWcharT {
+	wstr, size := StringToWcharT(str1)
+	switch SizeofWcharT {
 	case 2:
 		if size != 15 {
 			t.Errorf("size(%v) != 15", size)
@@ -52,10 +52,10 @@ func TestGowcharSimpleN(t *testing.T) {
 			t.Errorf("size(%v) != 14", size)
 		}
 	default:
-		panic(fmt.Sprintf("sizeof(wchar_t) = %v", sizeofWcharT))
+		panic(fmt.Sprintf("sizeof(wchar_t) = %v", SizeofWcharT))
 	}
 
-	str2, err := wcharTNToString(wstr, size-1)
+	str2, err := WcharTNToString(wstr, size-1)
 	if err != nil {
 		t.Errorf("wcharTToString error: %v", err)
 	}
