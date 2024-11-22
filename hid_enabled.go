@@ -36,6 +36,8 @@ import (
 	"sync"
 	"syscall"
 	"unsafe"
+
+	"github.com/bearsh/hid/internal/wchar"
 )
 
 func init() {
@@ -94,13 +96,13 @@ func Enumerate(vendorID uint16, productID uint16) []DeviceInfo {
 			BusType:   BusType(head.bus_type),
 		}
 		if head.serial_number != nil {
-			info.Serial, _ = wcharTToString(head.serial_number)
+			info.Serial, _ = wchar.WcharTToString(wchar.WCharTp(head.serial_number))
 		}
 		if head.product_string != nil {
-			info.Product, _ = wcharTToString(head.product_string)
+			info.Product, _ = wchar.WcharTToString(wchar.WCharTp(head.product_string))
 		}
 		if head.manufacturer_string != nil {
-			info.Manufacturer, _ = wcharTToString(head.manufacturer_string)
+			info.Manufacturer, _ = wchar.WcharTToString(wchar.WCharTp(head.manufacturer_string))
 		}
 		infos = append(infos, info)
 	}
@@ -163,13 +165,13 @@ func OpenByPath(p string) (*Device, error) {
 	}
 
 	if info.serial_number != nil {
-		dev.Serial, _ = wcharTToString(info.serial_number)
+		dev.Serial, _ = wchar.WcharTToString(wchar.WCharTp(info.serial_number))
 	}
 	if info.product_string != nil {
-		dev.Product, _ = wcharTToString(info.product_string)
+		dev.Product, _ = wchar.WcharTToString(wchar.WCharTp(info.product_string))
 	}
 	if info.manufacturer_string != nil {
-		dev.Manufacturer, _ = wcharTToString(info.manufacturer_string)
+		dev.Manufacturer, _ = wchar.WcharTToString(wchar.WCharTp(info.manufacturer_string))
 	}
 
 	return dev, nil
@@ -227,7 +229,7 @@ func (dev *Device) Write(b []byte) (int, error) {
 		if message == nil {
 			return 0, errors.New("hidapi: unknown failure")
 		}
-		failure, _ := wcharTToString(message)
+		failure, _ := wchar.WcharTToString(wchar.WCharTp(message))
 		return 0, errors.New("hidapi: " + failure)
 	}
 	return written, nil
@@ -274,7 +276,7 @@ func (dev *Device) SendFeatureReport(b []byte) (int, error) {
 		if message == nil {
 			return 0, errors.New("hidapi: unknown failure")
 		}
-		failure, _ := wcharTToString(message)
+		failure, _ := wchar.WcharTToString(wchar.WCharTp(message))
 		return 0, errors.New("hidapi: " + failure)
 	}
 	return written, nil
@@ -320,7 +322,7 @@ readAgain:
 		if message == nil {
 			return 0, errors.New("hidapi: unknown failure")
 		}
-		failure, _ := wcharTToString(message)
+		failure, _ := wchar.WcharTToString(wchar.WCharTp(message))
 		return 0, errors.New("hidapi: " + failure)
 	}
 	return int(read), nil
@@ -367,7 +369,7 @@ readAgain:
 		if message == nil {
 			return 0, errors.New("hidapi: unknown failure")
 		}
-		failure, _ := wcharTToString(message)
+		failure, _ := wchar.WcharTToString(wchar.WCharTp(message))
 		return 0, errors.New("hidapi: " + failure)
 	}
 	return int(read), nil
@@ -409,7 +411,7 @@ func (dev *Device) GetFeatureReport(b []byte) (int, error) {
 		if message == nil {
 			return 0, errors.New("hidapi: unknown failure")
 		}
-		failure, _ := wcharTToString(message)
+		failure, _ := wchar.WcharTToString(wchar.WCharTp(message))
 		return 0, errors.New("hidapi: " + failure)
 	}
 
@@ -452,7 +454,7 @@ func (dev *Device) GetInputReport(b []byte) (int, error) {
 		if message == nil {
 			return 0, errors.New("hidapi: unknown failure")
 		}
-		failure, _ := wcharTToString(message)
+		failure, _ := wchar.WcharTToString(wchar.WCharTp(message))
 		return 0, errors.New("hidapi: " + failure)
 	}
 
@@ -494,7 +496,7 @@ func (dev *Device) SetNonblocking(b bool) error {
 		if message == nil {
 			return errors.New("hidapi: unknown failure")
 		}
-		failure, _ := wcharTToString(message)
+		failure, _ := wchar.WcharTToString(wchar.WCharTp(message))
 		return errors.New("hidapi: " + failure)
 	}
 
@@ -528,7 +530,7 @@ func (dev *Device) GetDeviceInfo() (*DeviceInfo, error) {
 		if message == nil {
 			return nil, errors.New("hidapi: unknown failure")
 		}
-		failure, _ := wcharTToString(message)
+		failure, _ := wchar.WcharTToString(wchar.WCharTp(message))
 		return nil, errors.New("hidapi: " + failure)
 	}
 
@@ -543,13 +545,13 @@ func (dev *Device) GetDeviceInfo() (*DeviceInfo, error) {
 		BusType:   BusType(i.bus_type),
 	}
 	if i.serial_number != nil {
-		info.Serial, _ = wcharTToString(i.serial_number)
+		info.Serial, _ = wchar.WcharTToString(wchar.WCharTp(i.serial_number))
 	}
 	if i.product_string != nil {
-		info.Product, _ = wcharTToString(i.product_string)
+		info.Product, _ = wchar.WcharTToString(wchar.WCharTp(i.product_string))
 	}
 	if i.manufacturer_string != nil {
-		info.Manufacturer, _ = wcharTToString(i.manufacturer_string)
+		info.Manufacturer, _ = wchar.WcharTToString(wchar.WCharTp(i.manufacturer_string))
 	}
 
 	return info, nil
@@ -584,7 +586,7 @@ func (dev *Device) GetReportDescriptor() ([]byte, error) {
 		if message == nil {
 			return nil, errors.New("hidapi: unknown failure")
 		}
-		failure, _ := wcharTToString(message)
+		failure, _ := wchar.WcharTToString(wchar.WCharTp(message))
 		return nil, errors.New("hidapi: " + failure)
 	}
 

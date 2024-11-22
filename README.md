@@ -49,7 +49,7 @@ to give credit to the author of said package too.
 
 Wide character support in the `hid` package is done via the [`gowchar`](https://github.com/orofarne/gowchar)
 library, unmaintained since 2013; non buildable with a modern Go release and failing `go vet` checks. As
-such, `gowchar` was also vendored in inline (copyright headers and origins preserved).
+such, `gowchar` was also vendored in inline (copyright headers and origins preserved). It now lives in [`internal/wchar`](internal/wchar).
 
 ## License
 
