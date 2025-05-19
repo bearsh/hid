@@ -316,7 +316,7 @@ readAgain:
 			return 0, ErrDeviceClosed
 		}
 		// Device not closed, some other error occurred
-		message := C.hid_error(device)
+		message := C.hid_read_error(device)
 		if message == nil {
 			return 0, errors.New("hidapi: unknown failure")
 		}
@@ -363,7 +363,7 @@ readAgain:
 			return 0, ErrDeviceClosed
 		}
 		// Device not closed, some other error occurred
-		message := C.hid_error(device)
+		message := C.hid_read_error(device)
 		if message == nil {
 			return 0, errors.New("hidapi: unknown failure")
 		}
