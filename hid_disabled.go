@@ -95,6 +95,24 @@ func (dev *Device) GetInputReport(b []byte) (int, error) {
 	return 0, ErrUnsupportedPlatform
 }
 
+// SendOutputReport sends a output report to a HID device
+//
+// Output reports are sent over the Control endpoint as a
+// Set_Report transfer.  The first byte of @p data[] must
+// contain the Report ID. For devices which only support a
+// single report, this must be set to 0x0. The remaining bytes
+// contain the report data. Since the Report ID is mandatory,
+// calls to SendOutputReport() will always contain one
+// more byte than the report contains. For example, if a hid
+// report is 16 bytes long, 17 bytes must be passed to
+// SendOutputReport(): the Report ID (or 0x0, for
+// devices which do not use numbered reports), followed by the
+// report data (16 bytes). In this example, the length passed
+// in would be 17.
+func (dev *Device) SendOutputReport(b []byte) (int, error) {
+	return 0, ErrUnsupportedPlatform
+}
+
 // SetNonblocking sets the device handle to be non-blocking.
 //
 // In non-blocking mode calls to Read() will return
