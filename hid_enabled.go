@@ -459,6 +459,56 @@ func (dev *Device) GetInputReport(b []byte) (int, error) {
 	return read, nil
 }
 
+// SendOutputReport sends a output report to a HID device
+//
+// Output reports are sent over the Control endpoint as a
+// Set_Report transfer.  The first byte of @p data[] must
+// contain the Report ID. For devices which only support a
+// single report, this must be set to 0x0. The remaining bytes
+// contain the report data. Since the Report ID is mandatory,
+// calls to SendOutputReport() will always contain one
+// more byte than the report contains. For example, if a hid
+// report is 16 bytes long, 17 bytes must be passed to
+// SendOutputReport(): the Report ID (or 0x0, for
+// devices which do not use numbered reports), followed by the
+// report data (16 bytes). In this example, the length passed
+// in would be 17.
+func (dev *Device) SendOutputReport(b []byte) (int, error) {
+	// Abort if nothing to write
+	if len(b) == 0 {
+		return 0, nil
+	}
+	// Abort if device closed in between
+	dev.lock.Lock()
+	device := dev.device
+	dev.lock.Unlock()
+
+	if device == nil {
+		return 0, ErrDeviceClosed
+	}
+
+	// Send the feature report
+	written := int(C.hid_send_output_report(device, (*C.uchar)(&b[0]), C.size_t(len(b))))
+	if written == -1 {
+		// If the write failed, verify if closed or other error
+		dev.lock.Lock()
+		device = dev.device
+		dev.lock.Unlock()
+
+		if device == nil {
+			return 0, ErrDeviceClosed
+		}
+		// Device not closed, some other error occurred
+		message := C.hid_error(device)
+		if message == nil {
+			return 0, errors.New("hidapi: unknown failure")
+		}
+		failure, _ := wcharTToString(message)
+		return 0, errors.New("hidapi: " + failure)
+	}
+	return written, nil
+}
+
 // SetNonblocking sets the device handle to be non-blocking.
 //
 // In non-blocking mode calls to Read() will return
