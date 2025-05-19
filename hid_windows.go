@@ -47,3 +47,30 @@ func (dev *Device) GetContainerId() (*windows.GUID, error) {
 
 	return guid, nil
 }
+
+const (
+	INFINITE = -1
+)
+
+// SetWriteTimeout sets the timeout for Write operation.
+// The default timeout is 1sec for winapi backend.
+// In case if 1sec is not enough, on in case of multi-platform development,
+// the recommended value is 5sec, e.g. to match (unconfigurable) 5sec timeout
+// set for hidraw (linux kernel) implementation.
+// When the timeout is set to 0, hid_write function becomes non-blocking and would exit immediately.
+// When the timeout is set to INFINITE (-1), the function will not exit,
+// until the write operation is performed or an error occurred.
+func (dev *Device) SetWriteTimeout(timeout int32) error {
+	// Abort if device closed in between
+	dev.lock.Lock()
+	device := dev.device
+	dev.lock.Unlock()
+
+	if device == nil {
+		return ErrDeviceClosed
+	}
+
+	C.hid_winapi_set_write_timeout(device, C.ulong(timeout))
+
+	return nil
+}
